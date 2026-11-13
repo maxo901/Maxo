@@ -1,6 +1,6 @@
 {
   "name": "railway-messenger",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Telegram-style web messenger",
   "main": "server/index.js",
