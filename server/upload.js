@@ -31,20 +31,18 @@ const storage = multer.diskStorage({
 
 const mediaUpload = multer({ storage, limits: { fileSize: MAX_UPLOAD_MB * 1024 * 1024, files: 1 } });
 
-const avatarUpload = multer({
-  storage,
-  limits: { fileSize: 3 * 1024 * 1024, files: 1 },
-  fileFilter: (req, file, cb) => {
-    if (['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(baseMime(file.mimetype))) return cb(null, true);
-    const err = new Error('فقط فایل تصویری مجاز است');
-    err.status = 400;
-    cb(err);
-  },
-});
+const imageOnly = (req, file, cb) => {
+  if (['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(baseMime(file.mimetype))) return cb(null, true);
+  const err = new Error('e.image_only');
+  err.status = 400;
+  cb(err);
+};
+const avatarUpload = multer({ storage, limits: { fileSize: 3 * 1024 * 1024, files: 1 }, fileFilter: imageOnly });
+const wallpaperUpload = multer({ storage, limits: { fileSize: 6 * 1024 * 1024, files: 1 }, fileFilter: imageOnly });
 
 function removeFile(url) {
   if (!url || !String(url).startsWith('/uploads/')) return;
   fs.unlink(path.join(UPLOADS_DIR, path.basename(url)), () => {});
 }
 
-module.exports = { mediaUpload, avatarUpload, kindOf, baseMime, removeFile };
+module.exports = { mediaUpload, avatarUpload, wallpaperUpload, kindOf, baseMime, removeFile };
