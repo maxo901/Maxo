@@ -21,18 +21,9 @@ module.exports = {
   UPLOADS_DIR,
   SECRET: loadSecret(),
   APP_NAME: process.env.APP_NAME || 'پیام‌رسان',
+  // Who becomes the owner: OWNER_USERNAME, or (legacy) OWNER_EMAIL, or the very first account.
+  OWNER_USERNAME: (process.env.OWNER_USERNAME || '').trim().toLowerCase(),
   OWNER_EMAIL: (process.env.OWNER_EMAIL || '').trim().toLowerCase(),
   MAX_UPLOAD_MB: Number(process.env.MAX_UPLOAD_MB) || 50,
-  mail: {
-    from: process.env.MAIL_FROM || '',
-    resend: process.env.RESEND_API_KEY || '',
-    brevo: process.env.BREVO_API_KEY || '',
-    smtp: {
-      host: process.env.SMTP_HOST || '',
-      port: Number(process.env.SMTP_PORT) || 587,
-      user: process.env.SMTP_USER || '',
-      pass: process.env.SMTP_PASS || '',
-      secure: process.env.SMTP_SECURE === 'true',
-    },
-  },
+  STORY_TTL_MS: 24 * 3600 * 1000,
 };
