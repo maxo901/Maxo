@@ -1,114 +1,128 @@
 <!doctype html>
-<html lang="fa" dir="rtl" data-theme="classic" data-dark="0" data-pat="1">
+<html lang="fa" dir="rtl" data-theme="light">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-  <meta name="theme-color" content="#ffffff">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+  <meta name="theme-color" content="#3390ec">
   <title>Messenger</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/extra.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vazirmatn@33.0.3/Vazirmatn-font-face.css" media="print" onload="this.media='all'">
+  <script>
+    (function () {
+      try {
+        var p = JSON.parse(localStorage.getItem('prefs') || '{}');
+        var t = p.theme && p.theme !== 'auto' ? p.theme : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.dataset.theme = t;
+        var l = localStorage.getItem('lang');
+        if (l) { document.documentElement.lang = l; document.documentElement.dir = (l === 'fa' || l === 'ar') ? 'rtl' : 'ltr'; }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
 
-<!-- first run: language -->
-<div id="langPick" class="lang-pick hidden"></div>
-
-<!-- sign in / sign up (no e-mail code) -->
-<div id="auth" class="auth hidden">
-  <div class="auth-card">
-    <div class="logo" id="logo"></div>
-    <h1 id="appName"></h1>
-    <p class="sub" data-i18n="auth.sub"></p>
-    <div class="tabs">
-      <button type="button" id="tabLogin" class="on" data-i18n="auth.login"></button>
-      <button type="button" id="tabReg" data-i18n="auth.register"></button>
-    </div>
-
-    <form id="formLogin" autocomplete="on">
-      <label class="field"><span data-i18n="auth.user_or_email"></span><input id="lgLogin" autocomplete="username" autocapitalize="off" spellcheck="false" required></label>
-      <label class="field"><span data-i18n="auth.password"></span><input id="lgPass" type="password" autocomplete="current-password" required></label>
-      <div class="err" id="lgErr"></div>
-      <button class="btn block" type="submit" data-i18n="auth.login"></button>
-    </form>
-
-    <form id="formReg" class="hidden" autocomplete="on">
-      <label class="field"><span data-i18n="auth.display_name"></span><input id="rgName" maxlength="40" autocomplete="name" required></label>
-      <label class="field"><span data-i18n="auth.username"></span><input id="rgUser" maxlength="20" autocomplete="username" autocapitalize="off" spellcheck="false" dir="ltr" required><div class="hint" id="rgUserHint" data-i18n="auth.username_hint"></div></label>
-      <label class="field"><span data-i18n="auth.email_opt"></span><input id="rgEmail" type="email" autocomplete="email" dir="ltr"></label>
-      <label class="field"><span data-i18n="auth.password"></span><input id="rgPass" type="password" minlength="8" autocomplete="new-password" required><div class="hint" data-i18n="auth.password_hint"></div></label>
-      <div class="err" id="rgErr"></div>
-      <button class="btn block" type="submit" data-i18n="auth.register"></button>
-    </form>
-    <button class="auth-lang" id="authLang" type="button"></button>
+<!-- ============ Language (first launch) ============ -->
+<div id="langScreen" class="lang-screen hidden">
+  <div class="lang-card">
+    <div class="logo" id="langLogo"></div>
+    <h2 id="langTitle">Choose your language</h2>
+    <div class="lang-grid" id="langGrid"></div>
   </div>
 </div>
 
-<!-- app -->
+<!-- ============ Auth ============ -->
+<div id="auth" class="auth hidden">
+  <button class="icon-btn theme-corner" id="themeAuth" type="button"></button>
+  <div class="auth-card">
+    <div class="brand"><div class="logo" id="logo"></div><h1 class="brand-name">Messenger</h1></div>
+    <div class="tabs">
+      <button class="tab on" data-tab="login" type="button" data-i18n="login"></button>
+      <button class="tab" data-tab="reg" type="button" data-i18n="register"></button>
+    </div>
+    <p id="authErr" class="auth-err" role="alert"></p>
+
+    <form id="loginForm" class="stack">
+      <label class="field"><span data-i18n="username_or_id"></span><input class="inp" name="login" autocomplete="username" required dir="ltr"></label>
+      <label class="field"><span data-i18n="password"></span><input class="inp" name="password" type="password" autocomplete="current-password" required dir="ltr"></label>
+      <button class="btn block" data-i18n="login"></button>
+    </form>
+
+    <form id="regForm" class="stack hidden">
+      <label class="field"><span data-i18n="id_unique"></span>
+        <input class="inp" id="regUser" name="username" maxlength="20" autocomplete="off" required dir="ltr" placeholder="my_id">
+        <small id="userStatus" class="hint"></small></label>
+      <label class="field"><span data-i18n="display_name"></span><input class="inp" name="display_name" maxlength="40" required autocomplete="name"></label>
+      <label class="field"><span data-i18n="password"></span>
+        <input class="inp" name="password" type="password" minlength="6" maxlength="72" autocomplete="new-password" required dir="ltr">
+        <small class="hint" data-i18n="pwd_hint"></small></label>
+      <button class="btn block" data-i18n="create_account"></button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ App ============ -->
 <div id="app" class="app hidden">
   <aside class="sidebar" id="sidebar">
     <div class="side-head">
-      <button class="icon-btn" id="btnMenu" type="button" data-i18n-aria="menu"></button>
-      <label class="search"><span id="searchIc"></span><input id="search" type="search" autocomplete="off" data-i18n-ph="search"></label>
+      <button class="icon-btn" id="btnMenu" type="button"></button>
+      <input class="search" id="search" type="search" data-i18n-ph="search" autocomplete="off">
     </div>
-    <div id="storyBar" class="story-bar"></div>
+    <div id="storyStrip" class="strip stories-strip"></div>
+    <div id="onlineStrip" class="strip online-strip hidden"></div>
     <div id="chatList" class="chat-list"></div>
-    <button class="fab" id="fab" type="button" data-i18n-aria="new_message"></button>
+    <button class="fab" id="fabNew" type="button"></button>
   </aside>
 
   <main class="chat-pane" id="chatPane">
-    <div class="chat-empty" id="chatEmpty" data-i18n="pick_chat"></div>
+    <div class="wall" id="wall"></div>
+    <div id="emptyState" class="empty-state"><span data-i18n="select_chat"></span></div>
 
-    <section class="chat-view hidden" id="chatView">
+    <section id="chatView" class="chat-view hidden">
       <header class="chat-head">
-        <button class="icon-btn back-btn" id="btnBack" type="button"></button>
-        <div class="who" id="chatWho" role="button" tabindex="0">
+        <button class="icon-btn back" id="btnBack" type="button"></button>
+        <div class="head-info" id="headInfo">
           <span id="headAv"></span>
-          <div class="grow">
-            <div class="t1 ellipsis" id="headTitle"></div>
-            <div class="t2 ellipsis" id="headSub"></div>
-          </div>
+          <div class="head-text"><div class="head-title" id="headTitle"></div><div class="head-sub" id="headSub"></div></div>
         </div>
-        <button class="icon-btn" id="btnChatMenu" type="button"></button>
+        <button class="icon-btn" id="btnInfo" type="button"></button>
       </header>
 
-      <div class="msgs" id="msgs"><div class="msgs-inner" id="msgList"></div></div>
-      <button class="jump hidden" id="jump" type="button"><span id="jumpBadge"></span></button>
+      <div class="msg-scroll" id="msgScroll"><div class="msg-inner" id="msgList"></div></div>
+      <button class="jump hidden" id="jumpDown" type="button"><span id="jumpBadge" class="badge hidden"></span></button>
 
-      <div class="ctx-bar hidden" id="ctxBar">
-        <span id="ctxIc"></span><div class="bar"></div>
-        <div class="txt"><b id="ctxTitle"></b><span class="ellipsis" id="ctxText" style="display:block"></span></div>
-        <button class="icon-btn" id="ctxClose" type="button"></button>
-      </div>
-      <div class="emoji-panel hidden" id="emojiPanel"></div>
-      <div class="no-post hidden" id="noPost"></div>
-
-      <footer class="composer" id="composer">
-        <button class="icon-btn" id="btnAttach" type="button"></button>
-        <div class="box" id="composerBox">
-          <textarea id="input" rows="1" maxlength="4000" data-i18n-ph="message_ph" enterkeyhint="send"></textarea>
+      <div class="composer-wrap" id="composerWrap">
+        <div class="upbar hidden" id="upbar"><i></i></div>
+        <div class="ctx-bar hidden" id="ctxBar"></div>
+        <div class="closed-note hidden" id="closedNote"></div>
+        <form class="composer" id="composer" autocomplete="off">
+          <button class="icon-btn" id="btnAttach" type="button"></button>
+          <input type="file" id="fileInput" multiple hidden>
+          <textarea id="input" rows="1" maxlength="4000" data-i18n-ph="message_ph"></textarea>
+          <button class="send" id="btnSend" type="button"></button>
+        </form>
+        <div class="rec-bar hidden" id="recBar">
+          <button class="icon-btn" id="recCancel" type="button"></button>
+          <span class="rec-dot"></span><span id="recTime">0:00</span><span class="grow"></span>
+          <button class="send" id="recSend" type="button"></button>
         </div>
-        <button class="icon-btn" id="btnEmoji" type="button"></button>
-        <button class="send" id="btnSend" type="button"></button>
-      </footer>
+      </div>
     </section>
+
+    <section id="joinView" class="join-view hidden"></section>
   </main>
 </div>
 
-<div id="panels" class="panels"></div>
-<div id="views" class="views"></div>
-<div id="pop" class="pop hidden"></div>
-<div id="toasts" class="toasts"></div>
-
-<input type="file" id="fileAny" class="hidden" multiple>
-<input type="file" id="fileMedia" class="hidden" accept="image/*,video/*" multiple>
-<input type="file" id="fileOne" class="hidden" accept="image/*">
+<div id="screen" class="screen hidden"></div>
+<div id="menu" class="pop hidden"></div>
+<div id="toasts"></div>
+<div id="lightbox" class="lightbox hidden"><img id="lbImg" alt=""></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/i18n.js"></script>
-<script src="/core.js"></script>
-<script src="/editor.js"></script>
-<script src="/stories.js"></script>
-<script src="/panels.js"></script>
 <script src="/app.js"></script>
+<script src="/ui.js"></script>
+<script src="/media.js"></script>
+<script>document.addEventListener('DOMContentLoaded', init);</script>
 </body>
 </html>
