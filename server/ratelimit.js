@@ -13,9 +13,7 @@ module.exports = function limiter({ windowMs, max, message }) {
       h = { count: 0, reset: now + windowMs };
       hits.set(req.ip, h);
     }
-    if (++h.count > max) {
-      return res.status(429).json({ error: message || 'تعداد درخواست‌ها زیاد است، کمی بعد دوباره تلاش کنید' });
-    }
+    if (++h.count > max) return res.status(429).json({ error: message || 'e.rate_limited' });
     next();
   };
 };
