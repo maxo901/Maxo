@@ -7,6 +7,7 @@ db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 db.pragma('busy_timeout = 5000');
 
+/* ---------- base schema (identical to v1 so old databases keep working) ---------- */
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,14 +67,88 @@ CREATE TABLE IF NOT EXISTS reads (
   PRIMARY KEY (chat_id, user_id)
 );
 
-CREATE TABLE IF NOT EXISTS email_codes (
-  email      TEXT PRIMARY KEY COLLATE NOCASE,
-  code_hash  TEXT NOT NULL,
-  expires_at INTEGER NOT NULL,
-  attempts   INTEGER NOT NULL DEFAULT 0,
-  sent_at    INTEGER NOT NULL
-);
+CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 `);
+
+/* ---------- v2 additions ---------- */
+const hasCol = (t, c) => db.prepare(`PRAGMA table_info(${t})`).all().some((x) => x.name === c);
+const addCol = (t, c, def) => { if (!hasCol(t, c)) db.exec(`ALTER TABLE ${t} ADD COLUMN ${c} ${def}`); };
+
+addCol('users', 'settings', "TEXT NOT NULL DEFAULT '{}'");
+addCol('users', 'show_online', 'INTEGER NOT NULL DEFAULT 1');
+addCol('users', 'wallpaper', 'TEXT');
+addCol('users', 'pwd_at', 'INTEGER NOT NULL DEFAULT 0');
+
+addCol('chats', 'kind', "TEXT NOT NULL DEFAULT 'group'"); // group | channel (only meaningful when type = 'group')
+addCol('chats', 'avatar', 'TEXT');
+addCol('chats', 'official', 'INTEGER NOT NULL DEFAULT 0'); // owner-made: every user is a member, nobody can leave
+addCol('chats', 'invite_code', 'TEXT');
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS uq_invite ON chats(invite_code) WHERE invite_code IS NOT NULL');
+
+addCol('messages', 'fwd_name', 'TEXT');
+addCol('messages', 'media_w', 'INTEGER');
+addCol('messages', 'media_h', 'INTEGER');
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS chat_members (
+  chat_id   INTEGER NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+  user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role      TEXT NOT NULL DEFAULT 'member',
+  joined_at INTEGER NOT NULL,
+  PRIMARY KEY (chat_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_members_user ON chat_members(user_id);
+
+CREATE TABLE IF NOT EXISTS message_hides (
+  message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (message_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS chat_clears (
+  chat_id INTEGER NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  last_id INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (chat_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS stories (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type       TEXT NOT NULL,
+  file_url   TEXT NOT NULL,
+  file_mime  TEXT,
+  caption    TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_stories_exp ON stories(expires_at);
+
+CREATE TABLE IF NOT EXISTS story_views (
+  story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  seen_at  INTEGER NOT NULL,
+  PRIMARY KEY (story_id, user_id)
+);
+
+DROP TABLE IF EXISTS email_codes;
+`);
+
+const getMeta = (k) => (db.prepare('SELECT value FROM meta WHERE key = ?').get(k) || {}).value;
+const setMeta = (k, v) => db.prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(k, String(v));
+
+// One-time upgrade: groups from v1 were all owner-made => official; every existing user joins them.
+if (!getMeta('v2_members')) {
+  db.transaction(() => {
+    db.exec("UPDATE chats SET official = 1 WHERE type = 'group'");
+    db.prepare(
+      `INSERT OR IGNORE INTO chat_members (chat_id, user_id, role, joined_at)
+       SELECT c.id, u.id, CASE WHEN u.role = 'owner' THEN 'admin' ELSE 'member' END, ?
+       FROM chats c, users u WHERE c.type = 'group'`
+    ).run(Date.now());
+    setMeta('v2_members', 1);
+  })();
+}
 
 // Tiny prepared-statement cache: q('SELECT ...').get(...)
 const cache = new Map();
